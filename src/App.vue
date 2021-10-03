@@ -5,7 +5,7 @@
 useHead({
   title: 'DiceIt',
   meta: [
-    { name: 'description', content: 'Opinionated Vite Starter Template' },
+    { name: 'description', content: 'Objectively the best dice game powered by blockchain.' },
   ],
 })
 </script>
