@@ -6,10 +6,10 @@ const props = defineProps<{contract: ethers.Contract}>()
 const emit = defineEmits(['created', 'close'])
 
 const newGame = reactive({
-  challengerAddress: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
+  challengerAddress: '',
   maxScore: 12,
   maxCount: 3,
-  bet: 10,
+  bet: 0.1,
 })
 async function createGame() {
   try {
