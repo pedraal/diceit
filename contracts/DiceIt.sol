@@ -3,6 +3,19 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 contract DiceIt {
+    event GameStageChange(
+        address indexed _from,
+        uint256 indexed index,
+        Stage indexed _stage
+    );
+
+    event GameTurnPlayed(
+        address indexed _from,
+        uint256 indexed index,
+        uint256 _turn,
+        uint256 _score
+    );
+
     enum Stage {
         Reg,
         Run,
@@ -40,7 +53,7 @@ contract DiceIt {
         address _challenger,
         uint256 _maxScore,
         uint256 _maxTurn
-    ) public payable returns (uint256 index) {
+    ) public payable {
         require(msg.value > 0);
 
         games[currentGameIndex] = Game(
@@ -56,9 +69,8 @@ contract DiceIt {
             address(0),
             msg.value
         );
-
+        emit GameStageChange(msg.sender, currentGameIndex, Stage.Reg);
         currentGameIndex++;
-        return currentGameIndex - 1;
     }
 
     modifier isStage(uint256 gameId, Stage stage) {
@@ -66,13 +78,17 @@ contract DiceIt {
         _;
     }
 
-    function challengerBet(uint256 gameId) public payable isStage(gameId, Stage.Reg) {
+    function challengerBet(uint256 gameId)
+        public
+        payable
+        isStage(gameId, Stage.Reg)
+    {
         Game storage game = games[gameId];
         require(msg.value == game.bet);
 
         game.stage = Stage.Run;
+        emit GameStageChange(msg.sender, gameId, Stage.Run);
     }
-
 
     modifier isPlayerTurn(uint256 gameId, address player) {
         Game memory game = games[gameId];
@@ -101,43 +117,45 @@ contract DiceIt {
     {
         uint256 randomInt = random();
         Game storage game = games[gameId];
+        Player storage player;
+        Player storage opponent;
         if (msg.sender == game.owner) {
-            if (draw) game.ownerPlayer.score += randomInt;
-            game.ownerPlayer.turn++;
-
-            if (
-                !draw ||
-                game.ownerPlayer.score > game.maxScore ||
-                game.ownerPlayer.turn >= game.maxTurn
-            ) game.ownerPlayer.stop = true;
-            if (!game.challengerPlayer.stop)
-                game.currentPlayer = CurrentPlayer.Challenger;
+            player = game.ownerPlayer;
+            opponent = game.challengerPlayer;
         } else if (msg.sender == game.challenger) {
-            if (draw) game.challengerPlayer.score += randomInt;
-            game.challengerPlayer.turn++;
+            player = game.challengerPlayer;
+            opponent = game.ownerPlayer;
+        } else revert();
 
-            if (
-                !draw ||
-                game.challengerPlayer.score > game.maxScore ||
-                game.challengerPlayer.turn >= game.maxTurn
-            ) game.challengerPlayer.stop = true;
-            if (!game.ownerPlayer.stop)
-                game.currentPlayer = CurrentPlayer.Owner;
+        if (draw) player.score += randomInt;
+        player.turn++;
+
+        if (
+            !draw || player.score > game.maxScore || player.turn >= game.maxTurn
+        ) player.stop = true;
+
+        if (msg.sender == game.owner && !opponent.stop) {
+            game.currentPlayer = CurrentPlayer.Challenger;
+        } else if (msg.sender == game.challenger && !opponent.stop) {
+            game.currentPlayer = CurrentPlayer.Challenger;
         }
 
         if (game.ownerPlayer.stop && game.challengerPlayer.stop) {
             game.stage = Stage.Done;
-            game.winner = revealWinner(gameId);
+            game.winner = setWinner(gameId);
 
             if (game.winner == address(0)) {
-              payable(game.owner).transfer(game.bet);
-              payable(game.challenger).transfer(game.bet);
+                payable(game.owner).transfer(game.bet);
+                payable(game.challenger).transfer(game.bet);
             } else {
-              payable(msg.sender).transfer(game.bet * 2);
+                payable(game.winner).transfer(game.bet * 2);
             }
+            emit GameTurnPlayed(msg.sender, gameId, player.turn, player.score);
+            emit GameStageChange(msg.sender, gameId, Stage.Done);
         }
     }
 
+    // This is not a proper random generation method but it will do the job for this demo project
     function random() private view returns (uint256) {
         return
             (uint256(
@@ -151,7 +169,7 @@ contract DiceIt {
             ) % 6) + 1;
     }
 
-    function revealWinner(uint256 gameId)
+    function setWinner(uint256 gameId)
         public
         view
         isStage(gameId, Stage.Done)
@@ -160,85 +178,22 @@ contract DiceIt {
         Game memory game = games[gameId];
 
         if (
-            (game.ownerPlayer.score <= game.maxScore && game.challengerPlayer.score > game.maxScore) ||
-            (game.ownerPlayer.score <= game.maxScore && game.ownerPlayer.score > game.challengerPlayer.score)
+            (game.ownerPlayer.score <= game.maxScore &&
+                game.challengerPlayer.score > game.maxScore) ||
+            (game.ownerPlayer.score <= game.maxScore &&
+                game.ownerPlayer.score > game.challengerPlayer.score)
         ) {
             return game.owner;
         } else if (
-            (game.challengerPlayer.score <= game.maxScore && game.ownerPlayer.score > game.maxScore) ||
-            (game.challengerPlayer.score <= game.maxScore && game.ownerPlayer.score < game.challengerPlayer.score)
+            (game.challengerPlayer.score <= game.maxScore &&
+                game.ownerPlayer.score > game.maxScore) ||
+            (game.challengerPlayer.score <= game.maxScore &&
+                game.ownerPlayer.score < game.challengerPlayer.score)
         ) {
             return game.challenger;
         } else {
             return address(0);
         }
-    }
-
-      modifier isWinner(uint256 gameId, address player) {
-        Game memory game = games[gameId];
-        require(game.winner == player);
-        _;
-    }
-
-    function claimReward(uint256 gameId)
-      public
-      payable
-      isStage(gameId, Stage.Done)
-      isWinner(gameId, msg.sender) {
-        Game memory game = games[gameId];
-        payable(msg.sender).transfer(game.bet * 2);
-      }
-
-    function fetchOwnedGames() public view returns (Game[] memory _ownGames) {
-        uint256 totalGameCount = currentGameIndex;
-        uint256 gameCount = 0;
-        uint256 currentIndex = 0;
-
-        for (uint256 i = 0; i < totalGameCount; i++) {
-            if (games[i].owner == msg.sender) {
-                gameCount += 1;
-            }
-        }
-
-        Game[] memory ownGames = new Game[](gameCount);
-        for (uint256 i = 0; i < totalGameCount; i++) {
-            if (games[i].owner == msg.sender) {
-                uint256 currentId = i;
-                Game storage currentItem = games[currentId];
-                ownGames[currentIndex] = currentItem;
-                currentIndex += 1;
-            }
-        }
-
-        return ownGames;
-    }
-
-    function fetchParticipatingGames()
-        public
-        view
-        returns (Game[] memory _participatingGames)
-    {
-        uint256 totalGameCount = currentGameIndex;
-        uint256 gameCount = 0;
-        uint256 currentIndex = 0;
-
-        for (uint256 i = 0; i < totalGameCount; i++) {
-            if (games[i].challenger == msg.sender) {
-                gameCount += 1;
-            }
-        }
-
-        Game[] memory participatingGames = new Game[](gameCount);
-        for (uint256 i = 0; i < totalGameCount; i++) {
-            if (games[i].challenger == msg.sender) {
-                uint256 currentId = i;
-                Game storage currentItem = games[currentId];
-                participatingGames[currentIndex] = currentItem;
-                currentIndex += 1;
-            }
-        }
-
-        return participatingGames;
     }
 
     function fetchMyGames() public view returns (Game[] memory _myGames) {
