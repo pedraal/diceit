@@ -6,7 +6,7 @@ const provider = new ethers.providers.Web3Provider(window.ethereum)
 const signer = provider.getSigner()
 
 const connectedToMetamask = computed(() => {
-  return window.ethereum.selectedAddress && window.ethereum.selectedAddress
+  return window.ethereum.selectedAddress
 })
 
 const routeIsApp = computed(() => {

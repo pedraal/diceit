@@ -17,6 +17,8 @@ task('accounts', 'Prints the list of accounts', async(taskArgs, hre) => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+require('hardhat-gas-reporter')
+
 module.exports = {
   solidity: '0.8.4',
   paths: {

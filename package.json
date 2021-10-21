@@ -10,11 +10,13 @@
     "preview": "vite preview",
     "preview-https": "serve dist",
     "lint": "eslint \"**/*.{vue,ts,js}\"",
-    "hardhat:node": "npx hardhat node",
+    "hardhat": "env-cmd --file .env npx hardhat",
+    "hardhat:node": "env-cmd --file .env npx hardhat node",
+    "hardhat:test": "yarn hardhat test test/*.js",
     "hardhat:compile": "npx hardhat compile",
     "hardhat:deploy": "npx hardhat run scripts/deploy.js",
-    "hardhat:deploy:local": "yarn hardhat:deploy --network localhost",
-    "hardhat:deploy:ropsten": "env-cmd --file .env yarn hardhat:deploy --network ropsten"
+    "hardhat:deploy:local": "env-cmd --file .env yarn hardhat:deploy --network localhost",
+    "hardhat:deploy:ropsten": "env-cmd --file prod.env yarn hardhat:deploy --network ropsten"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
@@ -22,6 +24,7 @@
     "@openzeppelin/contracts": "^4.3.2",
     "@vueuse/core": "^6.5.3",
     "@vueuse/head": "^0.6.0",
+    "chai": "^4.3.4",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.7",
     "hardhat": "^2.6.4",
@@ -44,6 +47,7 @@
     "cross-env": "^7.0.3",
     "env-cmd": "^10.1.0",
     "eslint": "^7.32.0",
+    "hardhat-gas-reporter": "^1.0.4",
     "https-localhost": "^4.7.0",
     "markdown-it-link-attributes": "^3.0.0",
     "markdown-it-prism": "^2.2.1",

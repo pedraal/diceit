@@ -1,5 +1,10 @@
 {
   "extends": [
     "@antfu"
-  ]
+  ],
+  "globals": {
+    // for hardhat mocha tests
+    "describe": true,
+    "it": true
+  }
 }
