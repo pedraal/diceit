@@ -1,1 +1,1 @@
-export const diceItAddress = '0xe5250c73f916ED1B55b4d6dFF3C977b99dAB0C03'
+export const diceItAddress = '0x37650987e3E771B738D1e7E446614d3396847Da5'
