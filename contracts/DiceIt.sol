@@ -137,7 +137,7 @@ contract DiceIt {
         if (msg.sender == game.owner && !opponent.stop) {
             game.currentPlayer = CurrentPlayer.Challenger;
         } else if (msg.sender == game.challenger && !opponent.stop) {
-            game.currentPlayer = CurrentPlayer.Challenger;
+            game.currentPlayer = CurrentPlayer.Owner;
         }
 
         if (game.ownerPlayer.stop && game.challengerPlayer.stop) {
